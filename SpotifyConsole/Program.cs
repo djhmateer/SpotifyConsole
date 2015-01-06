@@ -6,7 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Web;
 
-namespace SpotifyImporter {
+namespace SpotifyConsole {
     public class SongInfo {
         public string Artist { get; set; }
         public string Title { get; set; }
@@ -30,19 +30,14 @@ namespace SpotifyImporter {
             Console.WriteLine(songa);
             songs.Add(songa);
 
-            PrintInvalid("Could not determine metadata for:");
-
-            Console.WriteLine();
-            invalid.Clear();
-
             var output = new List<string>();
             foreach (var song in songs) {
+                // Call the API
                 var response = Get<Response>("search", "track", song.Artist + " " + song.Title);
-                //var orderedTracks = response.Tracks.OrderBy(x => LevenshteinDistance.Compute(x.Artists.First().Name, song.Artist)).ThenBy(x => Math.Abs(x.Length - song.Duration));
-                // DM hack
-                var orderedTracks = response.Tracks;
 
+                var orderedTracks = response.Tracks;
                 var bestMatch = orderedTracks.FirstOrDefault();
+
                 if (bestMatch == null) {
                     invalid.Add(song.ToString());
                     continue;
