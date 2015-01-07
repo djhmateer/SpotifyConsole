@@ -7,7 +7,7 @@ using System.Net;
 using System.Web;
 
 namespace SpotifyConsole {
-    public class SongInfo {
+    public class Song {
         public string Artist { get; set; }
         public string Title { get; set; }
         public double Duration { get; set; }
@@ -19,53 +19,42 @@ namespace SpotifyConsole {
 
     class Program {
         public static List<string> invalid = new List<string>();
-        public static HashSet<SongInfo> songs = new HashSet<SongInfo>();
+        public static HashSet<Song> songs = new HashSet<Song>();
 
-        static void Main(string[] args) {
-            var songa = new SongInfo {
+        static void Main() {
+            var testSong = new Song {
                 Artist = "Metallica",
                 Title = "One",
                 Duration = 325
             };
-            Console.WriteLine(songa);
-            songs.Add(songa);
+            Console.WriteLine(testSong);
+            songs.Add(testSong);
 
-            var output = new List<string>();
+            //var textFileOutput = new List<string>();
+            var textFileOutput = new List<string>();
+
             foreach (var song in songs) {
                 // Call the API
-                var response = Get<Response>("search", "track", song.Artist + " " + song.Title);
+                Response response = Get<Response>("search", "track", song.Artist + " " + song.Title);
 
                 var orderedTracks = response.Tracks;
-                var bestMatch = orderedTracks.FirstOrDefault();
+                Response.TrackInfo bestMatch = orderedTracks.FirstOrDefault();
 
                 if (bestMatch == null) {
                     invalid.Add(song.ToString());
                     continue;
                 }
 
-                output.Add(bestMatch.Href);
+                //textFileOutput.Add(bestMatch.Href);
+                //textFileOutput.Add(response);
                 System.Threading.Thread.Sleep(100); // limit API rate
             }
 
-            PrintInvalid("Could not find tracks for:");
-            File.WriteAllLines("notfound.txt", invalid);
-
-            Console.WriteLine("Done! Generated output.txt");
-            File.WriteAllLines("output.txt", output);
-
+            //File.WriteAllLines("output.txt", textFileOutput);
+            Console.WriteLine("Done!");
             Console.ReadLine();
         }
-
-        public static void PrintInvalid(string msg) {
-            if (invalid.Any()) {
-                Console.WriteLine();
-                Console.WriteLine(msg);
-                foreach (var file in invalid) {
-                    Console.WriteLine("- " + file);
-                }
-            }
-        }
-
+        
         public class Response {
             public class ResponseInfo {
                 [JsonProperty("num_results")]
@@ -92,10 +81,11 @@ namespace SpotifyConsole {
         }
 
         static T Get<T>(string service, string method, string parameters = null) where T : class {
-            var url = String.Format("http://ws.spotify.com/{0}/1/{1}", service, method);
-            if (!String.IsNullOrWhiteSpace(parameters)) {
-                url += "?q=" + HttpUtility.UrlEncode(parameters);
-            }
+            //var url = String.Format("http://ws.spotify.com/{0}/1/{1}", service, method);
+            var url = String.Format("https://api.spotify.com/v1/search?q=metallica&type=artist", service, method);
+            //if (!String.IsNullOrWhiteSpace(parameters)) {
+            //    url += "?q=" + HttpUtility.UrlEncode(parameters);
+            //}
 
             string text = null;
             bool done = false;
@@ -123,8 +113,12 @@ namespace SpotifyConsole {
 
             if (String.IsNullOrEmpty(text)) throw new InvalidOperationException();
 
+            Log(text);
             return JsonConvert.DeserializeObject<T>(text);
         }
 
+        static void Log(string text){
+            File.WriteAllText("log.txt", text);
+        }
     }
 }
