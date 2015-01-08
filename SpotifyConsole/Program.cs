@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Web;
+using Newtonsoft.Json.Linq;
 
 namespace SpotifyConsole {
     public class Song {
@@ -22,39 +23,18 @@ namespace SpotifyConsole {
         public static HashSet<Song> songs = new HashSet<Song>();
 
         static void Main() {
-            var testSong = new Song {
+            var song = new Song {
                 Artist = "Metallica",
                 Title = "One",
                 Duration = 325
             };
-            Console.WriteLine(testSong);
-            songs.Add(testSong);
 
-            //var textFileOutput = new List<string>();
-            var textFileOutput = new List<string>();
+            var response = CallAPIAndDeserialise("search", "track", song.Artist + " " + song.Title);
 
-            foreach (var song in songs) {
-                // Call the API
-                Response response = Get<Response>("search", "track", song.Artist + " " + song.Title);
-
-                var orderedTracks = response.Tracks;
-                Response.TrackInfo bestMatch = orderedTracks.FirstOrDefault();
-
-                if (bestMatch == null) {
-                    invalid.Add(song.ToString());
-                    continue;
-                }
-
-                //textFileOutput.Add(bestMatch.Href);
-                //textFileOutput.Add(response);
-                System.Threading.Thread.Sleep(100); // limit API rate
-            }
-
-            //File.WriteAllLines("output.txt", textFileOutput);
             Console.WriteLine("Done!");
             Console.ReadLine();
         }
-        
+
         public class Response {
             public class ResponseInfo {
                 [JsonProperty("num_results")]
@@ -80,12 +60,47 @@ namespace SpotifyConsole {
             public IEnumerable<TrackInfo> Tracks { get; set; }
         }
 
-        static T Get<T>(string service, string method, string parameters = null) where T : class {
+        public class ArtistsResponse {
+            public string Href { get; set; }
+            public int Total { get; set; }
+
+            public List<Artist> Items { get; set; }
+
+            public class Artist{
+                public string Id { get; set; }
+                public List<SpotifyImage> Images { get; set; }
+                public string Name { get; set; }
+
+                public class SpotifyImage{
+                    public int Height { get; set; }
+                    public string Url { get; set; }
+                    public int Width { get; set; }
+                }
+            }
+        }
+
+        static ArtistsResponse CallAPIAndDeserialise(string service, string method, string parameters = null) {
+            var json = CallAPI(service, method, parameters);
+            Log(json);
+
+            var jsonNoArtistsRootElement = JObject.Parse(json)["artists"].ToString();
+            var result = JsonConvert.DeserializeObject<ArtistsResponse>(jsonNoArtistsRootElement);
+
+            var href = result.Href;
+            var total = result.Total;
+            var items = result.Items;
+            Console.WriteLine(href);
+            Console.WriteLine(total);
+            return result;
+        }
+
+        private static string CallAPI(string service, string method, string parameters) {
             //var url = String.Format("http://ws.spotify.com/{0}/1/{1}", service, method);
-            var url = String.Format("https://api.spotify.com/v1/search?q=metallica&type=artist", service, method);
             //if (!String.IsNullOrWhiteSpace(parameters)) {
             //    url += "?q=" + HttpUtility.UrlEncode(parameters);
             //}
+
+            var url = String.Format("https://api.spotify.com/v1/search?q=metallica&type=artist", service, method);
 
             string text = null;
             bool done = false;
@@ -112,12 +127,10 @@ namespace SpotifyConsole {
             }
 
             if (String.IsNullOrEmpty(text)) throw new InvalidOperationException();
-
-            Log(text);
-            return JsonConvert.DeserializeObject<T>(text);
+            return text;
         }
 
-        static void Log(string text){
+        static void Log(string text) {
             File.WriteAllText("log.txt", text);
         }
     }
