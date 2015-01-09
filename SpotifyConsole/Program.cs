@@ -23,13 +23,13 @@ namespace SpotifyConsole {
         public static HashSet<Song> songs = new HashSet<Song>();
 
         static void Main() {
-            var song = new Song {
-                Artist = "Metallica",
-                Title = "One",
-                Duration = 325
-            };
+            ArtistsResponse result = CallAPIAndDeserialise("metallica");
 
-            var response = CallAPIAndDeserialise("search", "track", song.Artist + " " + song.Title);
+            var href = result.Href;
+            var total = result.Total;
+            var items = result.Items;
+            Console.WriteLine(href);
+            Console.WriteLine(total);
 
             Console.WriteLine("Done!");
             Console.ReadLine();
@@ -79,28 +79,19 @@ namespace SpotifyConsole {
             }
         }
 
-        static ArtistsResponse CallAPIAndDeserialise(string service, string method, string parameters = null) {
-            var json = CallAPI(service, method, parameters);
-            Log(json);
+        static ArtistsResponse CallAPIAndDeserialise(string parameter = null) {
+            string json = CallAPI(parameter);
 
             var jsonNoArtistsRootElement = JObject.Parse(json)["artists"].ToString();
             var result = JsonConvert.DeserializeObject<ArtistsResponse>(jsonNoArtistsRootElement);
-
-            var href = result.Href;
-            var total = result.Total;
-            var items = result.Items;
-            Console.WriteLine(href);
-            Console.WriteLine(total);
+            
             return result;
         }
 
-        private static string CallAPI(string service, string method, string parameters) {
-            //var url = String.Format("http://ws.spotify.com/{0}/1/{1}", service, method);
-            //if (!String.IsNullOrWhiteSpace(parameters)) {
-            //    url += "?q=" + HttpUtility.UrlEncode(parameters);
-            //}
+        private static string CallAPI(string parameter) {
+            if (!String.IsNullOrWhiteSpace(parameter)) parameter = HttpUtility.UrlEncode(parameter);
 
-            var url = String.Format("https://api.spotify.com/v1/search?q=metallica&type=artist", service, method);
+            var url = String.Format("https://api.spotify.com/v1/search?q={0}&type=artist", parameter);
 
             string text = null;
             bool done = false;
